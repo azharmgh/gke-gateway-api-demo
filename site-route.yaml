@@ -1,0 +1,13 @@
+kind: HTTPRoute
+apiVersion: networking.x-k8s.io/v1alpha1
+metadata:
+  name: site
+  labels:
+    gateway: internal-http
+spec:
+  hostnames:
+  - "site.example.com"
+  rules:
+  - forwardTo:
+    - serviceName: site-v1
+      port: 8080
