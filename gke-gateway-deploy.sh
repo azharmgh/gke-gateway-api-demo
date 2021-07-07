@@ -8,7 +8,7 @@ CERTIFICATE_FILE=cert.pem
 
 
 if [[ -z $PROJECTNAME ]]; then
-    echo " Project Name is missing"
+    echo " Project ID is missing"
     exit
 else 
     echo $PROJECTNAME
@@ -66,7 +66,7 @@ gcloud compute firewall-rules create fw-allow-proxies \
   --rules=tcp:80,tcp:443,tcp:8080
 
 echo -e "\n*********************************************************\n"
-read -p "Press enter to continue creating resources.........."
+read -p "Press enter to continue creating resources..........\n"
 echo -e "\nCreating GKE cluster ..........................................\n"
 
 gcloud beta container --project "${PROJECTNAME}" clusters create "gateway-cluster" \
@@ -99,7 +99,9 @@ gcloud beta container --project "${PROJECTNAME}" clusters create "gateway-cluste
   --max-surge-upgrade 1 \
   --max-unavailable-upgrade 0 \
   --enable-shielded-nodes \
-  --node-locations "us-west1-a"
+  --node-locations "us-west1-a" \
+  --shielded-secure-boot \
+  --shielded-integrity-monitoring
 
 
 
@@ -155,26 +157,28 @@ sleep 1m
 echo -e "\n*********************************************************\n"
 read -p "Press enter to continue.........."
 
+kubectl get pods
+
 PODS=$(kubectl get pods | grep Running |  wc -l)
 if [[ $PODS -eq 6 ]]; then 
-     echo -e "6 pods deployed successfully..... \n"
+     echo -e "\n6 pods deployed successfully..... \n"
 else 
-     echo -e "Unable to deploy pods .... exiting...\n"
+     echo -e "\nUnable to deploy pods .... exiting...\n"
      exit
 fi
 
-echo -e "Checking deployed services...........\n"
+echo -e "\nChecking deployed services...........\n"
 kubectl get service
 
 SVCS=$(kubectl get service | grep store | wc -l)
 if [[ $SVCS -eq 3 ]]; then 
-     echo -e "3 services deployed successfully..... \n"
+     echo -e "\n3 services deployed successfully..... \n"
 else 
-     echo -e "Unable to validate services .... exiting...\n"
+     echo -e "\nUnable to validate services .... exiting...\n"
      exit
 fi
 
-echo -e "Deploying the HTTPRoute for application pods....\n"
+echo -e "\nDeploying the HTTPRoute for application pods....\n"
 kubectl apply -f store-route.yaml
 echo -e "Getting IP of internal gateway...................\n"
 
@@ -196,7 +200,7 @@ echo -e "\n*********************************************************\n"
 read -p "\nPress enter to continue creating a test-vm for testing.........."
 
 echo -e "\nCreating test-vm........\n"
-gcloud beta compute --project=$PROJECTNAME instances create test-vm --zone=us-west1-a --machine-type=e2-micro --subnet=gke-subnet --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=556649436052-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-10-buster-v20210609 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-balanced --boot-disk-device-name=test-vm --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --reservation-affinity=any
+gcloud beta compute --project=$PROJECTNAME instances create test-vm --zone=us-west1-a --machine-type=e2-micro --subnet=gke-subnet --network-tier=PREMIUM --maintenance-policy=MIGRATE  --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-10-buster-v20210609 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-balanced --boot-disk-device-name=test-vm --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --reservation-affinity=any --no-address --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring
 
 IP=$(kubectl get gateway internal-http -o=jsonpath="{.status.addresses[0].value}")
 echo -e "Run the command to ssh to the vm: \n"
