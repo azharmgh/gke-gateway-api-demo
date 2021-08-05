@@ -45,10 +45,12 @@ do
 done
 
 
+gcloud compute routers nats delete gke-nat-config --router=gke-nat-router  --region=us-west1 -q
+gcloud compute routers delete gke-nat-router --region=us-west1 -q
 
 gcloud compute firewall-rules delete fw-allow-proxies -q
 gcloud compute firewall-rules delete fw-allow-health-check  -q
-gcloud compute firewall-rules delete fw-allow-ssh -q
+gcloud compute firewall-rules delete fw-allow-ssh-gke -q
 gcloud compute networks subnets delete proxy-only-subnet --region=us-west1 -q
 gcloud compute networks subnets delete gke-subnet --region=us-west1 -q
 gcloud compute networks delete gateway-gke-network -q
