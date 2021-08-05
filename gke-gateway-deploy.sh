@@ -43,7 +43,7 @@ gcloud compute networks subnets create gke-subnet \
     --enable-private-ip-google-access
 
 echo -e "Creating firewall rules to allow tcp:22...........................\n"
-gcloud compute firewall-rules create fw-allow-ssh \
+gcloud compute firewall-rules create fw-allow-ssh-gke \
     --network=gateway-gke-network \
     --action=allow \
     --direction=ingress \
@@ -65,6 +65,20 @@ gcloud compute firewall-rules create fw-allow-proxies \
   --source-ranges=0.0.0.0/0 \
   --rules=tcp:80,tcp:443,tcp:8080
 
+echo -e "\nCreating NAT router......\n"
+gcloud compute routers create gke-nat-router \
+    --network gateway-gke-network\
+    --region us-west1
+
+gcloud compute routers nats create gke-nat-config \
+    --router-region us-west1 \
+    --router gke-nat-router \
+    --nat-all-subnet-ip-ranges \
+    --auto-allocate-nat-external-ips
+
+echo -e "\n NAT routers created\n.........."
+gcloud compute routers list
+
 echo -e "\n*********************************************************\n"
 read -p "Press enter to continue creating resources..........\n"
 echo -e "\nCreating GKE cluster ..........................................\n"
@@ -72,7 +86,7 @@ echo -e "\nCreating GKE cluster ..........................................\n"
 gcloud beta container --project "${PROJECTNAME}" clusters create "gateway-cluster" \
   --zone "us-west1-a" \
   --no-enable-basic-auth \
-  --cluster-version "1.20.6-gke.1000" \
+  --cluster-version "1.20.8-gke.900" \
   --release-channel "regular" \
   --machine-type "e2-small" \
   --image-type "COS_CONTAINERD" \
