@@ -9,7 +9,7 @@ CLUSTER_VERSION=1.21.6-gke.1500
 
 
 if [[ -z $PROJECTNAME ]]; then
-    echo " Project Name is missing"
+    echo " Project ID is missing"
     exit
 else 
     echo $PROJECTNAME
@@ -44,7 +44,7 @@ gcloud compute networks subnets create gke-subnet \
     --enable-private-ip-google-access
 
 echo -e "Creating firewall rules to allow tcp:22...........................\n"
-gcloud compute firewall-rules create fw-allow-ssh \
+gcloud compute firewall-rules create fw-allow-ssh-gke \
     --network=gateway-gke-network \
     --action=allow \
     --direction=ingress \
@@ -66,8 +66,22 @@ gcloud compute firewall-rules create fw-allow-proxies \
   --source-ranges=0.0.0.0/0 \
   --rules=tcp:80,tcp:443,tcp:8080
 
+echo -e "\nCreating NAT router......\n"
+gcloud compute routers create gke-nat-router \
+    --network gateway-gke-network\
+    --region us-west1
+
+gcloud compute routers nats create gke-nat-config \
+    --router-region us-west1 \
+    --router gke-nat-router \
+    --nat-all-subnet-ip-ranges \
+    --auto-allocate-nat-external-ips
+
+echo -e "\n NAT routers created\n.........."
+gcloud compute routers list
+
 echo -e "\n*********************************************************\n"
-read -p "Press enter to continue creating resources.........."
+read -p "Press enter to continue creating resources..........\n"
 echo -e "\nCreating GKE cluster ..........................................\n"
 
 gcloud beta container --project "${PROJECTNAME}" clusters create "gateway-cluster" \
@@ -101,6 +115,8 @@ gcloud beta container --project "${PROJECTNAME}" clusters create "gateway-cluste
   --max-unavailable-upgrade 0 \
   --enable-shielded-nodes \
   --node-locations "us-west1-a"
+  --shielded-secure-boot \
+  --shielded-integrity-monitoring
   --workload-pool=${PROJECTNAME}..svc.id.goog
 
 
@@ -157,26 +173,28 @@ sleep 1m
 echo -e "\n*********************************************************\n"
 read -p "Press enter to continue.........."
 
+kubectl get pods
+
 PODS=$(kubectl get pods | grep Running |  wc -l)
 if [[ $PODS -eq 6 ]]; then 
-     echo -e "6 pods deployed successfully..... \n"
+     echo -e "\n6 pods deployed successfully..... \n"
 else 
-     echo -e "Unable to deploy pods .... exiting...\n"
+     echo -e "\nUnable to deploy pods .... exiting...\n"
      exit
 fi
 
-echo -e "Checking deployed services...........\n"
+echo -e "\nChecking deployed services...........\n"
 kubectl get service
 
 SVCS=$(kubectl get service | grep store | wc -l)
 if [[ $SVCS -eq 3 ]]; then 
-     echo -e "3 services deployed successfully..... \n"
+     echo -e "\n3 services deployed successfully..... \n"
 else 
-     echo -e "Unable to validate services .... exiting...\n"
+     echo -e "\nUnable to validate services .... exiting...\n"
      exit
 fi
 
-echo -e "Deploying the HTTPRoute for application pods....\n"
+echo -e "\nDeploying the HTTPRoute for application pods....\n"
 kubectl apply -f store-route.yaml
 echo -e "Getting IP of internal gateway...................\n"
 
@@ -198,7 +216,7 @@ echo -e "\n*********************************************************\n"
 read -p "\nPress enter to continue creating a test-vm for testing.........."
 
 echo -e "\nCreating test-vm........\n"
-gcloud beta compute --project=$PROJECTNAME instances create test-vm --zone=us-west1-a --machine-type=e2-micro --subnet=gke-subnet --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=556649436052-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-10-buster-v20210609 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-balanced --boot-disk-device-name=test-vm --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --reservation-affinity=any
+gcloud beta compute --project=$PROJECTNAME instances create test-vm --zone=us-west1-a --machine-type=e2-micro --subnet=gke-subnet --network-tier=PREMIUM --maintenance-policy=MIGRATE  --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-10-buster-v20210609 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-balanced --boot-disk-device-name=test-vm --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --reservation-affinity=any --no-address --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring
 
 IP=$(kubectl get gateway internal-http -o=jsonpath="{.status.addresses[0].value}")
 echo -e "Run the command to ssh to the vm: \n"
