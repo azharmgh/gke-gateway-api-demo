@@ -1,0 +1,3 @@
+#!/bin/bash
+PROJECTNAME=$1
+PROJECTNUMBER=$2
