@@ -4,6 +4,7 @@ PRIVATE_KEY_FILE=key.pem
 CSR_FILE=csr.txt
 CONFIG_FILE=sslconfig.txt
 CERTIFICATE_FILE=cert.pem
+CLUSTER_VERSION=1.21.6-gke.1500
 
 
 
@@ -86,7 +87,7 @@ echo -e "\nCreating GKE cluster ..........................................\n"
 gcloud beta container --project "${PROJECTNAME}" clusters create "gateway-cluster" \
   --zone "us-west1-a" \
   --no-enable-basic-auth \
-  --cluster-version "1.20.8-gke.900" \
+  --cluster-version "${CLUSTER_VERSION}" \
   --release-channel "regular" \
   --machine-type "e2-small" \
   --image-type "COS_CONTAINERD" \
@@ -113,9 +114,10 @@ gcloud beta container --project "${PROJECTNAME}" clusters create "gateway-cluste
   --max-surge-upgrade 1 \
   --max-unavailable-upgrade 0 \
   --enable-shielded-nodes \
-  --node-locations "us-west1-a" \
+  --node-locations "us-west1-a"
   --shielded-secure-boot \
   --shielded-integrity-monitoring
+  --workload-pool=${PROJECTNAME}..svc.id.goog
 
 
 
