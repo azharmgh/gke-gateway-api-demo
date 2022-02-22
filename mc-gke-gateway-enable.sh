@@ -9,19 +9,25 @@ CLUSTER_VERSION=1.21.6-gke.1500
 
 
 if [[ -z $PROJECTNAME ]]; then
-    echo " Project Name is missing"
+    echo " Project ID is missing"
     exit
 else 
-    echo $PROJECTNAME
+    echo  "\nProject ID is..... "$PROJECTNAME
+fi
+
+if [[ -z $PROJECTNUMBER ]]; then
+    echo " Project Number is missing"
+    exit
+else 
+    echo "\n Project Number is "$PROJECTNUMBER
 fi
 
 
+echo -e "\n*********************************************************\n"
+echo  -e "\nEnabling services....................\n"
 
 echo -e "\n*********************************************************\n"
-echo  -e "Enabling services....................\n"
 
-echo -e "\n*********************************************************\n"
-echo  "Project ID is..... "$PROJECTNAME
 gcloud config set project ${PROJECTNAME}
 
 gcloud services enable \
@@ -39,7 +45,7 @@ echo  -e "Creating network mc-gateway-gke-network.....................\n"
 gcloud compute networks create mc-gateway-gke-network --subnet-mode=custom
 
 echo -e "Creating proxy only subnet us-west1................................\n"
-gcloud compute networks subnets create mc-proxy-only-subnet \
+gcloud compute networks subnets create mc-proxy-only-subnet-west1 \
     --purpose=REGIONAL_MANAGED_PROXY \
     --role=ACTIVE \
     --region=us-west1 \
@@ -68,7 +74,7 @@ gcloud compute networks subnets create mc-gke-subnet2 \
 
 
 echo -e "Creating proxy only subnet us-east1................................\n"
-gcloud compute networks subnets create mc-proxy-only-subnet \
+gcloud compute networks subnets create mc-proxy-only-subnet-east1 \
     --purpose=REGIONAL_MANAGED_PROXY \
     --role=ACTIVE \
     --region=us-east1 \
@@ -131,7 +137,7 @@ gcloud beta container --project "${PROJECTNAME}" clusters create "gke-west-1" \
   --metadata disable-legacy-endpoints=true \
   --scopes "https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append" \
   --num-nodes "3" \
-  --enable-stackdriver-kubernetes \
+  --logging=SYSTEM,WORKLOAD \
   --enable-private-nodes \
   --master-ipv4-cidr "172.16.0.32/28" \
   --enable-master-global-access \
@@ -165,7 +171,7 @@ gcloud beta container --project "${PROJECTNAME}" clusters create "gke-east-1" \
   --metadata disable-legacy-endpoints=true \
   --scopes "https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append" \
   --num-nodes "3" \
-  --enable-stackdriver-kubernetes \
+  --logging=SYSTEM,WORKLOAD \
   --enable-private-nodes \
   --master-ipv4-cidr "173.16.0.32/28" \
   --enable-master-global-access \
@@ -223,8 +229,12 @@ gcloud projects add-iam-policy-binding ${PROJECTNAME} \
 echo -e "\nConfirm  multicluster services enabled .....................................\n"
 gcloud container hub multi-cluster-services describe --project=${PROJECTNAME}
 
+kubectl config use-context gke-west-1
 echo -e "\nInstalling Gateway API  CRDs .....................................\n"
 kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.3.0" | kubectl apply -f -
+
+
+sleep 1m
 
 echo -e "\nEnable multicluster gatway controller .....................................\n"
 gcloud alpha container hub ingress enable \
@@ -241,7 +251,7 @@ gcloud projects add-iam-policy-binding ${PROJECTNAME} \
      --project=${PROJECTNAME}
 
 
-
+kubectl config current-context
 kubectl get gatewayclasses --context=gke-west-1
 
 
