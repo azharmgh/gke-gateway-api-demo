@@ -5,8 +5,8 @@ PRIVATE_KEY_FILE=key.pem
 CSR_FILE=csr.txt
 CONFIG_FILE=sslconfig.txt
 CERTIFICATE_FILE=cert.pem
-CLUSTER_VERSION=1.21.6-gke.1500
-
+CLUSTER_VERSION=1.22.6-gke.300  #1.21.6-gke.1500
+RELEASE_CHANNEL=rapid  #stable regular rapid
 
 if [[ -z $PROJECTNAME ]]; then
     echo " Project ID is missing"
@@ -129,7 +129,7 @@ gcloud beta container --project "${PROJECTNAME}" clusters create "gke-west-1" \
   --zone "us-west1-a" \
   --no-enable-basic-auth \
   --cluster-version "${CLUSTER_VERSION}" \
-  --release-channel "regular" \
+  --release-channel "${RELEASE_CHANNEL}" \
   --machine-type "e2-small" \
   --image-type "COS_CONTAINERD" \
   --disk-type "pd-standard" \
@@ -163,7 +163,7 @@ gcloud beta container --project "${PROJECTNAME}" clusters create "gke-east-1" \
   --zone "us-east1-b" \
   --no-enable-basic-auth \
   --cluster-version "${CLUSTER_VERSION}" \
-  --release-channel "regular" \
+  --release-channel "${RELEASE_CHANNEL}" \
   --machine-type "e2-small" \
   --image-type "COS_CONTAINERD" \
   --disk-type "pd-standard" \
